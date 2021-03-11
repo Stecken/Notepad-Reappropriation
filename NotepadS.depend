@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1615420591 source:c:\devstecken\projects\notepad\notepads\main.cpp
+	<tchar.h>
+	<stdio.h>
+	<stdlib.h>
+	<windows.h>
+
