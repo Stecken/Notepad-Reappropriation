@@ -8,8 +8,11 @@
 //debug libs
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <windows.h>
+
+#define MARTELO 13
 
 #define IDM_MYMENURESOURCE   3
 
@@ -30,10 +33,15 @@ LOGFONT lf;
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 void addMenus(HWND hWnd);
 void openFile(HWND hWnd);
+void saveFile(HWND hWnd);
 void addControls(HWND hWnd);
 void displayFile(char *pathFile);
 void cleanExit();
 void addFont();
+void resizeWindow(HWND hWnd);
+
+
+HICON icon;
 
 char *data;
 FILE *file;
@@ -43,6 +51,7 @@ int WINAPI WinMain (HINSTANCE hinstance,
                      LPSTR lpszArgument,
                      int nCmdShow)
 {
+    icon = LoadIcon(hinstance, MAKEINTRESOURCE(11));
     MSG msg = { };  // message
     WNDCLASS wc;    // windowclass data
     HWND hwnd;      // handle to the main window
@@ -57,7 +66,7 @@ int WINAPI WinMain (HINSTANCE hinstance,
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hinstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hIcon = LoadIcon(hinstance, MAKEINTRESOURCE(11));
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH) 0;
     wc.lpszMenuName =  MAKEINTRESOURCE(IDM_MYMENURESOURCE);
@@ -118,6 +127,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_FILE_OPEN:
                     openFile(hwnd);
                     break;
+                case IDM_FILE_SAVE:
+                    saveFile(hwnd);
+                    break;
                 case IDM_FILE_QUIT:
                     cleanExit();
                     PostQuitMessage (0);
@@ -127,6 +139,12 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             }
             return 0;
+        case WM_SIZE:
+            resizeWindow(hwnd);
+            break;
+        case WM_SIZING:
+            resizeWindow(hwnd);
+            break;
         case WM_CREATE:
             addMenus(hwnd);
             addControls(hwnd);
@@ -148,7 +166,7 @@ void addMenus(HWND hWnd) {
 
     HMENU hFileMenu = CreateMenu();
     AppendMenu(hFileMenu, MF_STRING, IDM_FILE_NEW, "Novo");
-    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_OPEN, "Abrir");
+    AppendMenu(hFileMenu, MF_STRING, IDM_FILE_OPEN, "Abrir...");
     AppendMenu(hFileMenu, MF_STRING, IDM_FILE_SAVE, "Salvar");
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR) hFileMenu, "Arquivo");
     AppendMenu(hMenu, MF_STRING, IDM_FILE_QUIT, "Sair");
@@ -175,6 +193,28 @@ void openFile(HWND hWnd) {
     displayFile(ofile.lpstrFile);
 }
 
+void saveFile(HWND hWnd){
+    int _size = GetWindowTextLength(hWndEdit);
+
+    char *contentSave = (char *)malloc(sizeof(char) * (_size + 1));
+
+    SendMessage(hWndEdit, WM_GETTEXT, (WPARAM)_size + 1, (LPARAM)contentSave);
+    if(file != NULL){
+        printf("ainda existe\n");
+    }
+    if (ftruncate(fileno(file), 1) != 0){
+        printf("\ne isso\n");
+    }
+    rewind(file);
+    int resulf = fwrite(contentSave, sizeof(char), _size + 1, file);
+    fclose(file);
+    if(file != NULL){
+        printf("\nnao existe dps\n");
+    }
+    printf("%d, %s\n result fwrite: %d", _size, contentSave, resulf);
+    free(contentSave);
+}
+
 void addControls(HWND hWnd){
     RECT rect;
     int width, height;
@@ -184,12 +224,12 @@ void addControls(HWND hWnd){
     }
 
     hfont = CreateFont(lf.lfHeight, lf.lfWidth, lf.lfEscapement, lf.lfOrientation, lf.lfWeight, lf.lfItalic, lf.lfUnderline, lf.lfStrikeOut, lf.lfCharSet, lf.lfOutPrecision, lf.lfClipPrecision, lf.lfQuality, lf.lfPitchAndFamily, lf.lfFaceName);
-    hWndEdit = CreateWindowW(L"Edit", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE| WS_VSCROLL | ES_AUTOVSCROLL, 0, 0, width, height, hWnd, NULL, NULL, NULL);
+    hWndEdit = CreateWindowW(L"Edit", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE| WS_VSCROLL | ES_AUTOVSCROLL, 0, 0, width - 10, height, hWnd, NULL, NULL, NULL);
     addFont();
 }
 
 void displayFile(char *pathFile){
-    file = fopen(pathFile, "rb");
+    file = fopen(pathFile, "r+b");
     fseek(file, 0, SEEK_END);
     int _size = ftell(file);
     rewind(file);
@@ -197,7 +237,6 @@ void displayFile(char *pathFile){
     fread(data, _size, 1, file);
 
     SetWindowText(hWndEdit, data);
-
 }
 
 void addFont(){
@@ -205,6 +244,16 @@ void addFont(){
 	hfont = CreateFont(lf.lfHeight, lf.lfWidth, lf.lfEscapement, lf.lfOrientation, FW_DONTCARE,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_OUTLINE_PRECIS,
                 CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY, VARIABLE_PITCH,TEXT("Arial"));
 	SendMessage(hWndEdit, WM_SETFONT, WPARAM (hfont), TRUE);
+}
+
+void resizeWindow(HWND hWnd) {
+    RECT rect;
+    int width, height;
+    if(GetWindowRect(hWnd, &rect)){
+      width = rect.right - rect.left;
+      height = rect.bottom - rect.top;
+    }
+    SetWindowPos(hWndEdit, NULL, 0, 0, width - 15, height - 50, SWP_NOMOVE|SWP_NOZORDER);
 }
 
 void cleanExit(){

@@ -1,7 +1,10 @@
 # depslib dependency file v1.0
-1615420591 source:c:\devstecken\projects\notepad\notepads\main.cpp
+1615732365 source:c:\devstecken\projects\notepad\notepads\main.cpp
 	<tchar.h>
 	<stdio.h>
 	<stdlib.h>
+	<unistd.h>
 	<windows.h>
+
+1615732987 source:c:\devstecken\projects\notepad\notepads\resource.rc
 
